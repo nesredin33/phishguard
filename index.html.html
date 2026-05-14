@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>PhishGuard • real-time phishing detection</title>
+  <!-- Font Awesome 6 for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #0b1120 0%, #1a2332 100%);
+      font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+      margin: 0;
+      color: #e2e8f0;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 750px;
+      background: rgba(18, 28, 46, 0.8);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      background: linear-gradient(135deg, rgba(20, 30, 48, 0.9) 0%, rgba(15, 23, 38, 0.95) 100%);
+      border: 1px solid rgba(74, 144, 226, 0.15);
+      border-radius: 3.5rem 3.5rem 3rem 3rem;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(66, 153, 225, 0.2);
+      padding: 2.5rem 2.2rem;
+      transition: all 0.2s ease;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 2.2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .logo-icon {
+      font-size: 2.8rem;
+      color: #3b82f6;
+      filter: drop-shadow(0 0 10px #2563eb);
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #f0f9ff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-top: -1rem;
+      margin-bottom: 2rem;
+      font-weight: 400;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .subtitle i {
+      color: #38bdf8;
+    }
+
+    .input-group {
+      display: flex;
+      background: #0f172a;
+      border-radius: 3rem;
+      padding: 0.3rem;
+      border: 1px solid #334155;
+      transition: all 0.25s;
+      background: #1e293b;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .input-group:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 18px #2563eb70, inset 0 1px 4px #000;
+    }
+
+    .input-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 1.2rem 1.5rem;
+      font-size: 1.05rem;
+      color: #f1f5f9;
+      outline: none;
+      border-radius: 3rem;
+      font-weight: 400;
+    }
+
+    .input-field::placeholder {
+      color: #64748b;
+      font-weight: 300;
+    }
+
+    .scan-button {
+      background: #2563eb;
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 0 2rem;
+      border-radius: 3rem;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      letter-spacing: 0.3px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      box-shadow: 0 6px 18px #1e3a8a;
+      border: 1px solid #3b82f6;
+      white-space: nowrap;
+    }
+
+    .scan-button:hover {
+      background: #3b82f6;
+      box-shadow: 0 10px 22px #1e3a8a;
+      transform: scale(1.02);
+    }
+
+    .scan-button:disabled {
+      opacity: 0.6;
+      transform: none;
+      box-shadow: 0 4px 10px #0f172a;
+      pointer-events: none;
+    }
+
+    .result-panel {
+      margin-top: 2.2rem;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 2.5rem;
+      padding: 1.8rem;
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      transition: 0.3s;
+      display: none;
+      animation: fadeSlide 0.35s ease;
+    }
+
+    .result-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeSlide {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 1.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .safe {
+      color: #4ade80;
+    }
+    .phishing {
+      color: #f87171;
+    }
+    .warning {
+      color: #fbbf24;
+    }
+
+    .confidence {
+      background: #1e293b;
+      border-radius: 3rem;
+      padding: 0.4rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #cbd5e1;
+    }
+
+    .details-grid {
+      margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .detail-item {
+      background: #0f172a;
+      border-radius: 1.5rem;
+      padding: 0.9rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .detail-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+    }
+
+    .detail-value {
+      font-weight: 600;
+      font-size: 1rem;
+      word-break: break-all;
+      color: #e2e8f0;
+    }
+
+    .reason-box {
+      margin-top: 1.2rem;
+      background: #1e293b;
+      padding: 0.9rem 1.3rem;
+      border-radius: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      color: #cbd5e1;
+    }
+
+    .examples {
+      margin-top: 1.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      justify-content: center;
+    }
+
+    .example-chip {
+      background: #1e293b;
+      border: 1px solid #475569;
+      padding: 0.6rem 1.4rem;
+      border-radius: 2.5rem;
+      font-size: 0.9rem;
+      color: #b9c7dd;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .example-chip:hover {
+      background: #2563eb30;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 1.8rem;
+      font-size: 0.8rem;
+      color: #5f6c80;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        padding: 1.8rem;
+      }
+      .input-group {
+        flex-direction: column;
+        background: transparent;
+        gap: 0.8rem;
+      }
+      .input-field {
+        background: #1e293b;
+        border-radius: 2.5rem;
+      }
+      .scan-button {
+        justify-content: center;
+        padding: 1rem;
+      }
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <i class="fas fa-shield-haltered logo-icon"></i>
+      <h1>PhishGuard</h1>
+    </div>
+    <div class="subtitle">
+      <i class="fas fa-bolt"></i> Real-time URL safety analysis
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="urlInput" class="input-field" placeholder="Paste URL or domain (e.g. https://suspicious.link)" autocomplete="off" autofocus>
+      <button id="scanButton" class="scan-button"><i class="fas fa-search"></i> Scan</button>
+    </div>
+
+    <!-- result display area -->
+    <div id="resultPanel" class="result-panel">
+      <div class="status-row">
+        <span id="statusBadge" class="badge"></span>
+        <span id="confidenceBadge" class="confidence"></span>
+      </div>
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="detail-label"><i class="far fa-clock"></i> Checked</span>
+          <span class="detail-value" id="checkedUrl">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label"><i class="fas fa-fingerprint"></i> Domain age</span>
+          <span class="detail-value" id="domainInfo">—</span>
+        </div>
+      </div>
+      <div id="reasonContainer" class="reason-box">
+        <i class="fas fa-info-circle"></i>
+        <span id="reasonText">Analysis details appear here</span>
+      </div>
+    </div>
+
+    <div class="examples">
+      <span class="example-chip" data-url="https://google.com"><i class="fas fa-check-circle"></i> google.com</span>
+      <span class="example-chip" data-url="http://secure-update-login.tk/verify"><i class="fas fa-exclamation-triangle"></i> phishing test</span>
+      <span class="example-chip" data-url="https://github.com"><i class="fab fa-github"></i> github.com</span>
+      <span class="example-chip" data-url="http://free-prize-claim.xyz/win"><i class="fas fa-gift"></i> scam sample</span>
+    </div>
+    <div class="footer-note">
+      <i class="fas fa-microchip"></i> ML-powered detection • instant preview
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // --- DOM elements ---
+      const urlInput = document.getElementById('urlInput');
+      const scanBtn = document.getElementById('scanButton');
+      const resultPanel = document.getElementById('resultPanel');
+      const statusBadge = document.getElementById('statusBadge');
+      const confidenceBadge = document.getElementById('confidenceBadge');
+      const checkedUrlEl = document.getElementById('checkedUrl');
+      const domainInfoEl = document.getElementById('domainInfo');
+      const reasonText = document.getElementById('reasonText');
+
+      // --- Helper to extract domain from URL ---
+      function extractHostname(url) {
+        try {
+          let normalized = url.trim();
+          if (!/^https?:\/\//i.test(normalized)) {
+            normalized = 'http://' + normalized;
+          }
+          const parsed = new URL(normalized);
+          return parsed.hostname;
+        } catch (e) {
+          return url.trim().replace(/^https?:\/\//i, '').split('/')[0];
+        }
+      }
+
+      // --- Phishing detection engine (real-time ML-inspired rules + heuristics) ---
+      function analyzeUrl(rawUrl) {
+        const url = rawUrl.trim();
+        if (url === '') {
+          return {
+            status: 'error',
+            label: 'Empty input',
+            confidence: 0,
+            reason: 'Please enter a URL or domain.',
+            domain: ''
+          };
+        }
+
+        const hostname = extractHostname(url);
+        const lowerUrl = url.toLowerCase();
+        const lowerHost = hostname.toLowerCase();
+
+        // Feature extraction (simulates real‑time ML features)
+        let score = 0;          // higher => more phishing-like
+        let reasons = [];
+
+        // 1. Suspicious TLDs (commonly abused)
+        const suspiciousTlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', '.top', '.work', '.date'];
+        const hasSuspiciousTld = suspiciousTlds.some(tld => lowerHost.endsWith(tld));
+        if (hasSuspiciousTld) {
+          score += 28;
+          reasons.push('Suspicious top-level domain (often used in phishing)');
+        }
+
+        // 2. IP address instead of domain
+        const ipPattern = /^(http[s]?:\/\/)?(\d{1,3}\.){3}\d{1,3}(:\d+)?(\/.*)?$/;
+        if (ipPattern.test(url) || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+          score += 35;
+          reasons.push('Uses IP address instead of domain name');
+        }
+
+        // 3. Long URL (excessive length)
+        if (url.length > 75) {
+          score += 12;
+          reasons.push('Unusually long URL');
+        }
+
+        // 4. Excessive subdomains (more than 3 dots in hostname)
+        const dotCount = (hostname.match(/\./g) || []).length;
+        if (dotCount > 3) {
+          score += 18;
+          reasons.push('Many subdomains (possible domain masking)');
+        }
+
+        // 5. Presence of @ symbol (used to confuse)
+        if (url.includes('@')) {
+          score += 40;
+          reasons.push('Contains "@" symbol (commonly used in phishing)');
+        }
+
+        // 6. Brand impersonation keywords (common targets)
+        const brandNames = ['paypal', 'apple', 'google', 'microsoft', 'facebook', 'amazon', 'netflix', 'secure', 'login', 'verify', 'account', 'update'];
+        let brandHit = false;
+        brandNames.forEach(brand => {
+          if (lowerUrl.includes(brand) && !lowerHost.includes(brand)) {
+            brandHit = true;
+          }
+        });
+        if (brandHit) {
+          score += 22;
+          reasons.push('Uses brand name in path but domain mismatch');
+        }
+
+        // 7. Check for suspicious keywords in URL
+        const phishingKeywords = ['confirm', 'banking', 'signin', 'unlock', 'recover', 'limited', 'suspend', 'wallet', 'password'];
+        phishingKeywords.forEach(kw => {
+          if (lowerUrl.includes(kw)) {
+            score += 9;
+            reasons.push(`Suspicious keyword: "${kw}"`);
+          }
+        });
+
+        // 8. Use of uncommon protocol (data:, javascript:)
+        if (/^(data|javascript):/i.test(url)) {
+          score += 45;
+          reasons.push('Dangerous protocol (data/javascript)');
+        }
+
+        // 9. Missing HTTPS and contains sensitive words
+        if (!lowerUrl.startsWith('https://') && (lowerUrl.includes('login') || lowerUrl.includes('secure'))) {
+          score += 25;
+          reasons.push('Missing HTTPS on login/secure page');
+        }
+
+        // 10. Domain age heuristic (simulated via TLD + length - real ML would use whois)
+        if (hasSuspiciousTld || hostname.length > 28) {
+          score += 6;
+        }
+
+        // Normalize score (max around 100)
+        let finalScore = Math.min(score, 100);
+        
+        // Decision boundaries
+        let status = 'safe';
+        let label = 'Legitimate';
+        let icon = '✅';
+        
+        if (finalScore >= 45) {
+          status = 'phishing';
+          label = 'Phishing';
+          icon = '⚠️';
+        } else if (finalScore >= 20) {
+          status = 'suspicious';
+          label = 'Suspicious';
+          icon = '🔶';
+        }
+
+        // Build detailed reason
+        let reasonMessage = '';
+        if (reasons.length === 0) {
+          reasonMessage = 'No strong phishing indicators detected. URL appears clean.';
+        } else {
+          reasonMessage = reasons.slice(0, 3).join(' • ');  // top reasons
+          if (reasons.length > 3) reasonMessage += ` +${reasons.length-3} more`;
+        }
+
+        // Domain "age" simulation (in real app, use WHOIS API)
+        const domainAgeHint = hostname.includes('google') || hostname.includes('github') ? 'Established domain' : 
+                              (hasSuspiciousTld ? 'Very new / risky TLD' : 'Normal registration');
+
+        return {
+          status: status,
+          label: label,
+          icon: icon,
+          confidence: Math.round(finalScore),
+          reason: reasonMessage,
+          domain: hostname,
+          domainAge: domainAgeHint,
+          fullUrl: url.length > 50 ? url.substring(0, 47) + '…' : url
+        };
+      }
+
+      // --- Render result into UI ---
+      function showResult(analysis) {
+        resultPanel.classList.add('active');
+        
+        // status badge
+        let badgeHtml = '';
+        if (analysis.status === 'safe') {
+          badgeHtml = `<i class="fas fa-check-circle" style="color:#4ade80;"></i> <span class="safe">Safe</span>`;
+        } else if (analysis.status === 'phishing') {
+          badgeHtml = `<i class="fas fa-exclamation-triangle" style="color:#f87171;"></i> <span class="phishing">Phishing</span>`;
+        } else if (analysis.status === 'suspicious') {
+          badgeHtml = `<i class="fas fa-exclamation-circle" style="color:#fbbf24;"></i> <span class="warning">Suspicious</span>`;
+        } else {
+          badgeHtml = `<i class="fas fa-question-circle"></i> Unknown`;
+        }
+        statusBadge.innerHTML = badgeHtml;
+
+        // confidence
+        let confLevel = analysis.confidence;
+        let confColor = confLevel >= 45 ? '#f87171' : (confLevel >= 20 ? '#fbbf24' : '#4ade80');
+        confidenceBadge.innerHTML = `<i class="fas fa-chart-simple"></i> Risk score: ${confLevel}% <span style="color:${confColor}; margin-left:0.3rem;">●</span>`;
+
+        checkedUrlEl.textContent = analysis.fullUrl || analysis.domain;
+        domainInfoEl.textContent = analysis.domainAge || '—';
+        reasonText.textContent = analysis.reason || 'Completed analysis.';
+      }
+
+      // --- Handle scan action ---
+      function performScan() {
+        const rawUrl = urlInput.value.trim();
+        if (rawUrl === '') {
+          // subtle shake effect or just show empty result
+          resultPanel.classList.add('active');
+          statusBadge.innerHTML = `<i class="fas fa-times-circle" style="color:#94a3b8;"></i> <span style="color:#cbd5e1;">No URL</span>`;
+          confidenceBadge.innerHTML = `<i class="fas fa-chart-simple"></i> Risk score: 0%`;
+          checkedUrlEl.textContent = '—';
+          domainInfoEl.textContent = '—';
+          reasonText.textContent = 'Please type or paste a URL to scan.';
+          return;
+        }
+
+        // Simulate network/ML processing (real-time but with tiny delay for UX)
+        scanBtn.disabled = true;
+        scanBtn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Analyzing...';
+
+        setTimeout(() => {
+          const analysis = analyzeUrl(rawUrl);
+          showResult(analysis);
+          
+          // re-enable button
+          scanBtn.disabled = false;
+          scanBtn.innerHTML = '<i class="fas fa-search"></i> Scan';
+        }, 280); // feels real-time with ML processing illusion
+      }
+
+      // --- Event listeners ---
+      scanBtn.addEventListener('click', performScan);
+
+      urlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          performScan();
+        }
+      });
+
+      // Example chips click
+      document.querySelectorAll('.example-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+          const url = this.getAttribute('data-url');
+          if (url) {
+            urlInput.value = url;
+            performScan();
+          }
+        });
+      });
+
+      // initial auto-focus handled by autofocus attribute
+
+      // Optional: small demo on page load with a default safe URL (but keep empty)
+      // Not auto-scanning to respect user.
+      console.log('🛡️ PhishGuard real-time detection ready. Enter a URL to test.');
+    })();
+  </script>
+</body>
+</html>
